@@ -1,0 +1,1032 @@
+---
+title: "Violencia contra niños, niñas y adolescentes"
+output:
+  flexdashboard::flex_dashboard:
+    storyboard: true
+    social: menu
+    source: embed
+  html_document:
+    df_print: paged
+  pdf_document: default
+runtime: shiny
+vertical_layout: fill
+---
+<style>
+  .navbar-inverse {
+    background-color: #DE6B72 !important;
+    border-color: #DE6B72 !important;
+  }
+
+  .navbar-inverse .navbar-brand {
+    color: white !important;
+  }
+
+  .navbar-inverse .navbar-brand:hover,
+  .navbar-inverse .navbar-brand:focus {
+    color: white !important;
+  }
+
+  .navbar-inverse .navbar-nav > li > a {
+    color: white !important;
+  }
+
+  .navbar-inverse .navbar-nav > li > a:hover,
+  .navbar-inverse .navbar-nav > li > a:focus {
+    background-color: gray !important;
+    color: white !important;
+  }
+
+  .navbar-inverse .navbar-nav > .active > a,
+  .navbar-inverse .navbar-nav > .active > a:hover,
+  .navbar-inverse .navbar-nav > .active > a:focus {
+    background-color: gray !important;
+    color: white !important;
+  }
+
+  .navbar-inverse .navbar-toggle {
+    border-color: red !important;
+  }
+
+  .navbar-inverse .navbar-toggle .icon-bar {
+    background-color: white !important;
+  }
+
+  .navbar-inverse .navbar-collapse,
+  .navbar-inverse .navbar-form {
+    border-color: white !important;
+  
+  }
+  .chart-shim{
+      overflow: auto !important;
+}
+.storyboard-nav .sbframelist ul li.active {
+    background-color: #7D7D7D;
+    border-radius: 7px;
+    font-size: 18px;
+    
+}
+</style>
+### 1. ¿Qué es la violencia contra Niños, Niñas y Adolescentes?
+```{r INCIAL, message=FALSE, warning=FALSE, include=TRUE, echo=FALSE}
+library(htmltools)
+div(
+  style = "position: relative;
+    display: flex;
+    width: 100%;
+    text-align: left;
+    align-content: center;
+    justify-content: center;
+    align-items: center;",
+  # Imagen y texto flotante
+ img(src = "C:/Users/juand/OneDrive/Escritorio/MIMP/Fuentes_Violencia/UNICEF_UN0443687_Kelly.jpg", alt = "Image", style = "width: 100%; height: auto;"),
+  
+  div(style="position: absolute;z-index: 5;max-width: 80%;",
+    
+    div(
+    style = "position: relative;
+    z-index: 5;
+    padding: 10px;
+    background-color: #7D7D7D;
+    color: white;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 24px;
+    margin-bottom: 15px",
+    "La violencia contra niños, niñas y adolescentes (NNA) es un problema grave y generalizado que afecta a millones de menores en todo el mundo. Este tipo de violencia puede tomar diversas formas, incluyendo abuso físico, psicológico, sexual y económico. Ademas, suele presentarse en múltiples entornos como el hogar, la escuela, la comunidad y en línea."
+  ),
+  div(
+    style = "    z-index: 5;
+    position: relative;
+    padding: 10px;
+    background-color: #F55555;
+    color: white;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 30px;",
+    "Solo en 2023 en el Perú por cada" , htmltools::span(style = "font-size: 40px; font-weight: bold;", "10"),"Casos reportados de Violencia Sexual",
+    htmltools::span(style = "font-size: 40px; font-weight: bold;", "7"),"corresponden a Niños, Niñas y Adolescentes"
+  ),
+))
+div(style = "z-index: 5;
+    position: relative;
+    padding: 10px;
+    background-color: #7D7D7D;
+    color: white;              
+    font-weight: bold;
+    font-style: italic;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 30px; margin-top: 15px; margin-bottom:15px",
+    
+        HTML("<i>\"En 6 años (2017-2023) a nivel nacional los casos de violencia contra Niños, Niñas y Adolescentes se duplicaron. Este fenómeno se distribuye de manera particular y su incidencia puede variar a nivel Departamental, Provincia y Distrital\"</i>"))
+
+
+```
+```{r timelapseimport2256, message=FALSE, warning=FALSE,include=FALSE}
+library(shinydashboard)
+library(shiny)
+library(leaflet)
+library(sf)
+library(dplyr)
+library(tidyr)
+library(classInt)
+library(slickR)
+# Carga el shapefile
+shapefile_path_page2 <- "C:/Users/juand/OneDrive/Escritorio/MIMP/distritos/CASO_DEP_2023/Caso_DEP_2023.shp"
+data_page2 <- st_read(shapefile_path_page2)
+data_page2$Tasa_creci <- as.numeric(as.character(data_page2$Tasa_creci))
+data_page2
+```
+
+```{r timelapseimport225XX6, message=FALSE, warning=FALSE,include=TRUE}
+# Carga las librerías necesarias
+library(shiny)
+library(leaflet)
+library(dplyr)
+library(tidyr)
+library(sf)
+library(classInt)
+library(htmltools)
+library(flexdashboard)
+library(lubridate)
+library(htmltools)
+library(highcharter)
+library(readxl)
+library(tidyverse)
+library(RColorBrewer)
+# Identifica los valores atípicos
+data_page2$outlier <- ifelse(data_page2$Tasa_creci %in% boxplot.stats(data_page2$Tasa_creci)$out, "Outlier", "Normal")
+
+# Filtra los datos normales
+data_normal_page2 <- data_page2[data_page2$outlier == "Normal",]
+
+# Define intervalos en función de cuantiles
+intervals_page2 <- classIntervals(data_normal_page2$Tasa_creci, n = 5, style = "quantile")
+
+# Define la paleta de colores
+pal_page2 <- colorBin(palette = "YlOrRd", bins = intervals_page2$brks, domain = data_normal_page2$Tasa_creci)
+
+# Calcula los centroides
+centroids_page2 <- st_centroid(data_page2)
+centroid_coords_page2 <- st_coordinates(centroids_page2)
+
+# Función para formatear porcentajes multiplicando por 100 y redondeando a 2 decimales
+format_percent_page2 <- function(x) {
+  paste0(round(as.numeric(x) * 100, 2), "%")
+}
+
+# Función para formatear tasas redondeando a 2 decimales
+format_rate_page2 <- function(x) {
+  round(as.numeric(x), 2)
+}
+
+# Renderiza el mapa con la leyenda en la parte superior derecha
+leaflet_map2 <- leaflet(data_page2) %>%
+  addTiles() %>%
+  addPolygons(fillColor = ~ifelse(outlier == "Outlier", "magenta", pal_page2(Tasa_creci)),
+              color = "#000000",
+              weight = 1,
+              opacity = 1,
+              fillOpacity = 0.7,
+              popup = ~paste("Departamento: ", htmlEscape(DEPARTAMEN), "<br>Tasa Interanual: ", format_percent_page2(Tasa_creci))) %>%
+  addCircleMarkers(data = centroids_page2, 
+                   lng = centroid_coords_page2[, 1], 
+                   lat = centroid_coords_page2[, 2], 
+                   radius = 0, 
+                   color = "#000000", 
+                   stroke = FALSE, 
+                   fillOpacity = 1,
+                   popup = ~paste("Departamento: ", htmlEscape(DEPARTAMEN), "<br>Tasa Interanual: ", format_percent_page2(Tasa_creci))) %>%
+  addLegend("topright", pal = pal_page2, values = ~Tasa_creci,
+            title = "Tasa Interanual",
+            labFormat = labelFormat(suffix = "%", transform = function(x) round(x * 100, 2)),
+            opacity = 0.9) %>%
+  addControl("<strong>Valores Atípicos: Color Fucsia</strong>", position = "bottomleft")
+
+# Convertir los datos a formato largo para la variación anual
+data_long_page2 <- data_page2 %>%
+  gather(key = "year", value = "rate", Cal_Tasa_N:Cal_Tasa_6) %>%
+  mutate(year = dplyr::recode(year,
+                              "Cal_Tasa_N" = "2017",
+                              "Cal_Tasa_1" = "2018",
+                              "Cal_Tasa_2" = "2019",
+                              "Cal_Tasa_3" = "2020",
+                              "Cal_Tasa_4" = "2021",
+                              "Cal_Tasa_5" = "2022",
+                              "Cal_Tasa_6" = "2023")) %>%
+  mutate(year = as.numeric(year))
+
+# Asegurarse de que 'rate' es numérico
+data_long_page2$rate <- as.numeric(as.character(data_long_page2$rate))
+
+# Define la interfaz de usuario de Shiny
+ui2 <- fluidPage(
+  tags$style(HTML("
+    body
+    .leaflet-control .legend {
+      font-size: 10px !important;
+      line-height: 1.1;
+    }
+    .leaflet-control .legend .legend-title {
+      font-size: 12px !important;
+    }
+    .leaflet-control .legend .legend-scale ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .leaflet-control .legend .legend-labels li {
+      line-height: 18px;
+      font-size: 10px;
+    }
+    .leaflet-control .legend .legend-source {
+      font-size: 8px;
+    }
+    h3 {
+      font-size: 12pt !important;
+      text-align: center;
+      font-weight: bold;
+    }
+    .custom-table th, .custom-table td {
+      border: 2px solid black;
+      padding: 10px;
+      text-align: center;
+    }
+    .slider-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .custom-box {
+      border: solid 1px gray;
+      border-radius: 10px;
+      padding: 10px;
+      min-height: 650px;
+      min-width: 600px;
+      margin-top: 40px
+    }
+  ")),
+  div( class="test-div",
+    column(6,
+           div(class = "custom-box",
+               h3("Crecimiento promedio interanual de la violencia contra Niños, Niñas y Adolescentes entre 2017 - 2023", style = "color: black;"),div(
+                 style = "position: relative; height: auto; padding: 6px; background-color: #F14E36; color: white; border-radius: 7px; text-align: center; font-size: 18px; max-width: 5500px; margin-top: 15px; margin-bottom:15px",
+                 "En el departamento de Ucayali la violencia contra, Niños, Niñas y Adolescentes creció un 32.8% cada año, quintuplicandose(x5) los casos entre 2017-2023."
+               ),
+               leafletOutput("leaflet_map2", height = "70vh"),
+           )
+    ),
+    column(6,
+           div(class = "custom-box",
+               h3("Dinámica Anual de la Violencia contra Niños, Niñas y Adolescentes en el Perú", style = "color: black;"),
+               #leafletOutput("shiny_map2", height = "70vh"),
+               highchartOutput("linechart", height = "400px", width = "90%"),
+               div(
+                 style = "position: relative; height: auto; padding: 6px; background-color: #F55555; color: white; border-radius: 7px; text-align: center; font-size: 18px; max-width: 5500px; margin-top: 15px; margin-bottom:15px",
+                 "Aunque la violencia contra Niños, Niñas y Adolescentes aumentó drásticamente entre 2017 y 2023, la violencia sexual, en particular, ha alcanzado niveles alarmantes. En 2017, se registraron 6,593 casos de violencia sexual. Sin embargo, en 2021 hubo un notable incremento de casos, y para 2023, el total ascendió a 17,063 casos, donde 5 de cada 10 casos de violencia reportada son de naturaleza sexual."
+               )
+               
+           )
+    )
+  )
+)
+
+# Define el servidor de Shiny
+server2 <- function(input, output, session) {
+  filtered_data2 <- reactive({
+    data_long_page2 %>%
+      filter(year == input$year2)
+  })
+  
+  output$leaflet_map2 <- renderLeaflet({
+    leaflet_map2
+  })
+  
+  output$shiny_map2 <- renderLeaflet({
+    # Define intervalos en función de cuantiles para el segundo mapa
+    intervals_long_page2 <- classIntervals(filtered_data2()$rate, n = 5, style = "quantile")
+    pal2 <- colorBin(palette = "YlOrRd", bins = intervals_long_page2$brks, domain = filtered_data2()$rate)
+    
+    leaflet(data = filtered_data2()) %>%
+      addTiles() %>%
+      addPolygons(fillColor = ~pal2(rate), 
+                  color = "black", weight = 1, opacity = 1, fillOpacity = 0.7,
+                  popup = ~paste("Departamento: ", htmlEscape(DEPARTAMEN), "<br>Tasa de Crecimiento: ", format_rate_page2(rate)),
+                  labelOptions = labelOptions(
+                    noHide = TRUE,
+                    direction = "auto",
+                    textOnly = TRUE,
+                    style = list(
+                      "color" = "black",
+                      "font-size" = "10px",
+                      "background" = "transparent",
+                      "border" = "transparent",
+                      "border-radius" = "2px",
+                      "padding" = "2px",
+                      "box-shadow" = "3px 3px 5px rgba(0,0,0,0.3)"
+                    ))) %>%
+      addCircleMarkers(lng = centroid_coords_page2[, 1], 
+                       lat = centroid_coords_page2[, 2], 
+                       radius = 0, 
+                       color = "#000000",
+                       stroke = FALSE, 
+                       fillOpacity = 1,
+                       popup = ~paste("Departamento: ", htmlEscape(DEPARTAMEN), "<br>Tasa de Crecimiento: ", format_rate_page2(rate))) %>%
+      addLegend(position = "topright",
+                pal = pal2,
+                values = filtered_data2()$rate,
+                title = "Tasa de Crecimiento",
+                labFormat = labelFormat(transform = function(x) round(x, 2)),
+                opacity = 0.7,
+                className = "info legend",
+                bins = 5)
+  })
+  output$linechart <- renderHighchart({
+    Excel_path <- "C:/Users/juand/OneDrive/Escritorio/MIMP/Analisis_DEP_17_23.xlsx"  # Update path accordingly
+    df2 <- read_excel(Excel_path, sheet = "Crecimiento_Casos")
+    df_long <- df2 %>%
+      pivot_longer(cols = -Tipo_Violencia, names_to = "Año", values_to = "Casos")
+    df_long <- df_long %>%
+      mutate(Año = as.numeric(Año))
+    
+    hchart(df_long, "line", hcaes(x = Año, y = Casos, group = Tipo_Violencia)) %>%
+      hc_title(text = "Evolución de Casos por categoria de violencia sexual") %>%
+      hc_xAxis(title = list(text = "Año")) %>%
+      hc_yAxis(title = list(text = "Número de Casos")) %>%
+      hc_chart(height = 400, width = NULL) %>%  # Ajusta la altura del highchart aquí y permite que el ancho se ajuste automáticamente
+      hc_add_theme(hc_theme_elementary())
+  })
+}
+
+# Ejecuta la aplicación Shiny
+shinyApp(ui2, server2)
+div(style = "z-index: 5;
+    position: relative;
+    padding: 10px;
+    font-weight: bold;
+    font-style: italic;
+        background-color: #7D7D7D;
+    color: white;              
+    border-radius: 10px;
+    text-align: center;
+    font-size: 30px;
+    margin-top: 15px; margin-bottom:15px",
+        HTML("<i>\"La violencia sexual contra niños, niñas y adolescentes (NNA) experimentó un aumento significativo en comparación con otras formas de violencia en 23 de las 25 regiones \"</i>"))
+
+```
+
+```{r timelapseimportSXXXSSF9, message=FALSE, warning=FALSE,include=TRUE}
+library(shiny)
+library(highcharter)
+library(readxl)
+library(tidyverse)
+library(RColorBrewer)
+library(leaflet)
+library(dplyr)
+library(tidyr)
+library(sf)
+library(classInt)
+library(htmltools)
+library(magrittr)
+library(treemap)
+library(viridis)
+# Define UI
+ui4 <- fluidPage(
+  tags$style(HTML("
+    body, html {
+      overflow: auto;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+    }
+    .custom-text-div { 
+      background-color: #821846; 
+      color: white; 
+      padding: 20px; 
+      border-radius: 5px; 
+      text-align: justify; 
+      z-index: 5; 
+      font-size: 18px;
+      margin-top: 15px; margin-bottom: 15px;
+    }
+    h3 {
+      font-size: 12pt !important;
+      text-align: center;
+      font-weight: bold;
+    }
+    .custom-box2 {
+      border: solid 1px gray;
+      border-radius: 10px;
+      padding: 10px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    #heatmap-container, #linechart-container {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    #treemap, #linechart {
+      flex-grow: 1;
+    }
+    .custom-select-container {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+    }
+    .custom-select-container .col-sm-6 {
+      flex: 1;
+    }
+  ")),
+  fluidRow(
+    style = "height: 100%;",
+    column(
+      class = "custom-box2",
+      width = 6,
+      div(
+        id = "heatmap-container",
+        h3("Incidencia de la Violencia contra Ninos, Ninas y Adolescentes", style = "color: black; position: relative;"),
+        div(class = "custom-text-div", textOutput("growthText")),
+        div(
+          class = "custom-select-container",
+          column(width = 6, selectInput("depar_ca_treemap", "Seleccione Departamento:", choices = NULL)),
+          column(width = 6, selectInput("tipo_violencia_treemap", "Seleccione Tipo de Violencia:", choices = c("Económica", "Psicológica", "Física", "Sexual")))
+        ),
+        highchartOutput("treemap", height = "100%"),
+        div(
+          style = "position: relative; height: auto; padding: 6px; background-color: #808080; color: white; border-radius: 7px; text-align: center; font-size: 18px; margin-top: 15px; margin-bottom: 15px;",
+          "A nivel territorial, la violencia contra Niños, Niñas y Adolescentes creció tanto a nivel nacional como departamental en términos de tasa y número de casos entre 2017 y 2023. No obstante, a nivel local podemos notar que la incidencia de casos puede variar entre las provincias de un departamento"
+        )      )
+    ),
+    column(
+      class = "custom-box2",
+      width = 6,
+      div(
+        id = "linechart-container",
+        h3("Crecimiento de Casos a lo largo del Tiempo", style = "color: black;"),
+        div(
+          class = "custom-select-container",
+          column(width = 6, selectInput("depar_ca", "Seleccione Departamento:", choices = NULL)),
+          column(width = 6, selectInput("provin_ca", "Seleccione Provincia:", choices = NULL))
+        ),
+        highchartOutput("linechart", height = "100%"),
+        div(
+          id = "dynamic-text",
+          style = "position: relative; height: 180px; text-align: center; background-color:#808080; border-radius: 7px; padding: 10px; font-size: 20px; color: white; margin-top: 15px;",
+          textOutput("dynamicText")
+        )
+      )
+    )
+  )
+)
+
+
+# Define server logic
+server4 <- function(input, output, session) {
+  data_path <- "C:/Users/juand/OneDrive/Escritorio/MIMP/Analisis_DEP_17_23.xlsx"  # Update path accordingly
+  df98 <- read_excel(data_path, sheet = "ACUMULADO")
+  # Load data for treemap and linechart
+  df <- read_excel(data_path, sheet = "PROVINCIA") %>%
+    replace_na(list(
+      Eco_17 = 0, Eco_18 = 0, Eco_19 = 0, Eco_20 = 0, Eco_21 = 0, Eco_22 = 0, Eco_23 = 0,
+      Psico_17 = 0, Psico_18 = 0, Psico_19 = 0, Psico_20 = 0, Psico_21 = 0, Psico_22 = 0, Psico_23 = 0,
+      Fisica_17 = 0, Fisica_18 = 0, Fisica_19 = 0, Fisica_20 = 0, Fisica_21 = 0, Fisica_22 = 0, Fisica_23 = 0,
+      Sex_17 = 0, Sex_18 = 0, Sex_19 = 0, Sex_20 = 0, Sex_21 = 0, Sex_22 = 0, Sex_23 = 0
+    )) %>%
+    mutate(across(starts_with("Eco_") | starts_with("Psico_") | starts_with("Fisica_") | starts_with("Sex_"), ~ ifelse(. < 0, 0, .)))
+  
+  # Create dynamic UI inputs
+  updateSelectInput(session, "depar_ca_treemap", choices = unique(df$DEPAR_CA))
+  updateSelectInput(session, "depar_ca", choices = unique(df$DEPAR_CA))
+  
+  observe({
+    selected_depar <- input$depar_ca
+    filtered_provin <- df %>% filter(DEPAR_CA == selected_depar)
+    updateSelectInput(session, "provin_ca", choices = unique(filtered_provin$PROVIN_CA))
+  })
+  
+  output$treemap <- renderHighchart({
+    selected_depar <- input$depar_ca_treemap
+    selected_tipo <- switch(input$tipo_violencia_treemap,
+                            "Económica" = "Eco",
+                            "Psicológica" = "Psico",
+                            "Física" = "Fisica",
+                            "Sexual" = "Sex")
+    
+    data_selected <- df %>%
+      filter(DEPAR_CA == selected_depar) %>%
+      select(PROVIN_CA, starts_with(paste0(selected_tipo, "_"))) %>%
+      pivot_longer(cols = starts_with(selected_tipo), 
+                   names_to = "Tipo_Ano", values_to = "Casos") %>%
+      separate(Tipo_Ano, into = c("Tipo", "Ano"), sep = "_") %>%
+      group_by(PROVIN_CA, Tipo) %>%
+      summarise(Total_Casos = sum(Casos, na.rm = TRUE))
+    
+    if(nrow(data_selected) == 0){
+      showNotification("No hay datos para los filtros seleccionados", type = "error")
+      return(NULL)
+    }
+    colors <- c("#D53127","#E95635","#F74527","#FEE187","#A8D86A","#48AE5A","#219A53")
+    tm <- treemap(
+      data_selected,
+      index = c("PROVIN_CA"),
+      vSize = "Total_Casos",
+      vColor = "Total_Casos",
+      type = "value",
+      palette = rev(colors)
+    )
+    
+    hctreemap(tm, allowDrillToNode = TRUE, layoutAlgorithm = "squarified") %>%
+      hc_add_theme(hc_theme_elementary())
+  })
+  
+  output$linechart <- renderHighchart({
+    selected_depar <- input$depar_ca
+    selected_provin <- input$provin_ca
+    
+    df_filtered <- df %>%
+      filter(DEPAR_CA == selected_depar, PROVIN_CA == selected_provin) %>%
+      pivot_longer(cols = starts_with("Eco_") | starts_with("Psico_") | starts_with("Fisica_") | starts_with("Sex_"), 
+                   names_to = c("Tipo_Violencia", "Ano"), 
+                   names_sep = "_", 
+                   values_to = "Casos") %>%
+      mutate(Ano = as.numeric(Ano),
+             Tipo_Violencia = case_when(
+               Tipo_Violencia == "Eco" ~ "Violencia Económica",
+               Tipo_Violencia == "Psico" ~ "Violencia Psicológica",
+               Tipo_Violencia == "Fisica" ~ "Violencia Física",
+               Tipo_Violencia == "Sex" ~ "Violencia Sexual"
+             ))
+    
+    hchart(df_filtered, "line", hcaes(x = Ano, y = Casos, group = Tipo_Violencia)) %>%
+      hc_title(text = "Evolucion de los Casos entre 2017-2023") %>%
+      hc_xAxis(title = list(text = "Año")) %>%
+      hc_yAxis(title = list(text = "Número de Casos")) %>%
+      hc_chart(height = 400, width = NULL) %>%
+      hc_add_theme(hc_theme_elementary())
+  })
+  
+  output$dynamicText <- renderText({
+    selected_depar <- input$depar_ca
+    selected_provin <- input$provin_ca
+    
+    if (is.null(selected_depar) || is.null(selected_provin)) {
+      return("Seleccione un departamento y una provincia para ver la información detallada.")
+    }
+    
+    casos_2017 <- df %>%
+      filter(DEPAR_CA == selected_depar, PROVIN_CA == selected_provin) %>%
+      summarise(
+        `Violencia económica en 2017` = sum(Eco_17, na.rm = TRUE),
+        `Violencia psicológica en 2017` = sum(Psico_17, na.rm = TRUE),
+        `Violencia física en 2017` = sum(Fisica_17, na.rm = TRUE),
+        `Violencia sexual en 2017` = sum(Sex_17, na.rm = TRUE)
+      ) %>%
+      pivot_longer(cols = everything(), names_to = "Tipo_Violencia", values_to = "Casos_2017")
+    
+    casos_2023 <- df %>%
+      filter(DEPAR_CA == selected_depar, PROVIN_CA == selected_provin) %>%
+      summarise(
+        `Violencia económica en 2023` = sum(Eco_23, na.rm = TRUE),
+        `Violencia psicológica en 2023` = sum(Psico_23, na.rm = TRUE),
+        `Violencia física en 2023` = sum(Fisica_23, na.rm = TRUE),
+        `Violencia sexual en 2023` = sum(Sex_23, na.rm = TRUE)
+      ) %>%
+      pivot_longer(cols = everything(), names_to = "Tipo_Violencia", values_to = "Casos_2023")
+    
+    total_casos <- df %>%
+      filter(DEPAR_CA == selected_depar, PROVIN_CA == selected_provin) %>%
+      summarise(
+        `Económica acumulada` = sum(Eco_17 + Eco_18 + Eco_19 + Eco_20 + Eco_21 + Eco_22 + Eco_23, na.rm = TRUE),
+        `Psicológica acumulada` = sum(Psico_17 + Psico_18 + Psico_19 + Psico_20 + Psico_21 + Psico_22 + Psico_23, na.rm = TRUE),
+        `Física acumulada` = sum(Fisica_17 + Fisica_18 + Fisica_19 + Fisica_20 + Fisica_21 + Fisica_22 + Fisica_23, na.rm = TRUE),
+        `Sexual acumulada` = sum(Sex_17 + Sex_18 + Sex_19 + Sex_20 + Sex_21 + Sex_22 + Sex_23, na.rm = TRUE)
+      ) %>%
+      pivot_longer(cols = everything(), names_to = "Tipo_Violencia", values_to = "Casos_total")
+    
+    tipo_max_total <- total_casos %>% filter(Casos_total == max(Casos_total, na.rm = TRUE)) %>% pull(Tipo_Violencia)
+    casos_max_total <- total_casos %>% filter(Casos_total == max(Casos_total, na.rm = TRUE)) %>% pull(Casos_total)
+    
+    tipo_max_2017 <- casos_2017 %>% filter(Casos_2017 == max(Casos_2017, na.rm = TRUE)) %>% pull(Tipo_Violencia)
+    casos_max_2017 <- casos_2017 %>% filter(Casos_2017 == max(Casos_2017, na.rm = TRUE)) %>% pull(Casos_2017)
+    
+    tipo_max_2023 <- casos_2023 %>% filter(Casos_2023 == max(Casos_2023, na.rm = TRUE)) %>% pull(Tipo_Violencia)
+    casos_max_2023 <- casos_2023 %>% filter(Casos_2023 == max(Casos_2023, na.rm = TRUE)) %>% pull(Casos_2023)
+    
+    paste("En el departamento de", selected_depar, ",provincia de", selected_provin, 
+          "la Violencia", tipo_max_total, "presenta mayor incidencia de casos con", casos_max_total, 
+          "reportes entre 2017-2023. La", tipo_max_2017, "presentó mayor incidencia con", casos_max_2017, 
+          "casos, mientras que la", tipo_max_2023, "predominó con", casos_max_2023, "casos reportados.")
+  })
+  
+  output$growthText <- renderText({
+    selected_depar <- input$depar_ca_treemap
+    
+    if (is.null(selected_depar)) {
+      return("Seleccione un departamento para ver la información detallada.")
+    }
+    
+    data_selected2 <- df98 %>%
+      filter(DEPARTAMENTO == selected_depar) %>%
+      summarise(
+        `Violencia sexual` = sum(Tasa_crecimientoVS, na.rm = TRUE),
+        `Violencia física` = sum(Tasa_crecimiento_Fisi, na.rm = TRUE),
+        `Violencia psicológica` = sum(Tasa_crecimiento_Psico, na.rm = TRUE)
+      ) %>%
+      pivot_longer(cols = everything(), names_to = "Tipo_Violencia", values_to = "Tasa_Crecimiento") %>%
+      mutate(Tasa_Crecimiento = round(Tasa_Crecimiento, 2))
+    
+    data_sorted <- data_selected2 %>% arrange(desc(Tasa_Crecimiento))
+    
+    tipo_max_1 <- data_sorted$Tipo_Violencia[1]
+    tasa_max_1 <- data_sorted$Tasa_Crecimiento[1]
+    tipo_max_2 <- data_sorted$Tipo_Violencia[2]
+    tasa_max_2 <- data_sorted$Tasa_Crecimiento[2]
+    tipo_max_3 <- data_sorted$Tipo_Violencia[3]
+    tasa_max_3 <- data_sorted$Tasa_Crecimiento[3]
+    
+    paste("En el departamento de", selected_depar, 
+          "entre 2017 y 2023 la", tipo_max_1, "creció un", tasa_max_1, 
+          "% cada año superando a la", tipo_max_2, "y la", tipo_max_3, "con", tasa_max_2,"%", "y", tasa_max_3,"%", "respectivamente")
+  })
+}
+
+shinyApp(ui = ui4, server = server4)
+```
+### 2. ¿Cómo se distribuye la violencia sexual contra Niños, Niñas y Adolescentes en el territorio?
+```{r timelapseimportSSSF9, message=FALSE, warning=FALSE,include=FALSE,echo=FALSE}
+library(flexdashboard)
+library(sf)
+library(leaflet)
+library(classInt)
+library(shiny)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(htmltools)
+library(leafem)
+library(mapview)
+library(leafpop)
+library(dplyr)
+library(dplyr)
+library(kableExtra)
+library(leaflet)
+library(RColorBrewer)
+library(leafem)
+library(dplyr)
+library(leaflet)
+library(mapview)
+library(RColorBrewer)
+library(leafem)
+# Carga el shapefile
+shapefile_path11 <- "C:/Users/juand/OneDrive/Escritorio/MIMP/DEP-2023-SX/DEP-2023-SX.shp"
+shapefile_path222 <- "C:/Users/juand/OneDrive/Escritorio/MIMP/distritos/Data_violencia_NA_SX/Prov/PROV_NNA2_.shp"
+shapefile_path333 <- "C:/Users/juand/OneDrive/Escritorio/MIMP/distritos/distritos/Servicios/Totales.shp"
+shapefile_path444 <- "C:/Users/juand/OneDrive/Escritorio/MIMP/Siseve_SEX/Siseve_SEX_casos.shp"
+shapefile_path555 <- "C:/Users/juand/OneDrive/Escritorio/MIMP/distritos_IGN/DISTRITO/Distrito_MIMP_PNP.shp"
+shapefile_path666 <- "C:/Users/juand/OneDrive/Escritorio/MIMP/distritos/Data_violencia_NA_SX/Dist/DIST_NNA2_.shp"
+#shapefile_path777 <- "C:\Users\juand\OneDrive\Escritorio\MIMP\distritos\DISTRITOS_inei_geogpsperu_suyopomalia\New Folder\DISTRITOS.shp"
+#shapefile_path888 <- ""
+#shapefile_path999 <- ""
+df11_99 <- st_read(shapefile_path11)
+df222_99 <- st_read(shapefile_path222)
+df333_99 <- st_read(shapefile_path333)
+df444_99 <- st_read(shapefile_path444)
+df555_99 <- st_read(shapefile_path555)
+df666_99 <- st_read(shapefile_path666)
+```
+```{r timelapseimport9DDD, message=FALSE, warning=FALSE,include=TRUE}
+library(leafem)
+library(leafpop)
+# Renombrar los data frames
+Violencia_sexual_contra_NNA_99 <- df11_99 %>%
+  select(DEPARTAMENTO = DEPARTAMEN,
+         Población_NNA = Pob_NNA,
+         Tasa_violencia_sexual_2017 = NA_TS17,
+         Tasa_violencia_sexual_2018 = NA_TS18,
+         Tasa_violencia_sexual_2019 = NA_TS19,
+         Tasa_violencia_sexual_2020 = NA_TS20,
+         Tasa_violencia_sexual_2021 = NA_TS21,
+         Tasa_violencia_sexual_2022 = NA_TS22,
+         Tasa_violencia_sexual_2023 = NA_TS23,
+         Tasa_de_crecimiento_interanual = Tasa_creci)
+
+Violencia_sexual_contra_NNA_provincial_99 <- df222_99 %>%
+  select(DEPARTAMENTO = DEPAR_CA,
+         PROVINCIA = PROVIN_CA,
+         Tasa_violencia_sexual_2017 = NA_TS17,
+         Tasa_violencia_sexual_2018 = NA_TS18,
+         Tasa_violencia_sexual_2019 = NA_TS19,
+         Tasa_violencia_sexual_2020 = NA_TS20,
+         Tasa_violencia_sexual_2022 = NA_TS22,
+         Tasa_violencia_sexual_2023 = NA_TS23,
+         Tasa_de_crecimiento_interanual = Tasa_creci)
+
+df333_99 <- df333_99 %>%
+  select(DEPARTAMENTO = DEPARTAMEN,
+         PROVINCIA = PROVINCIA,
+         DISTRITO = DISTRITO,
+         SERVICIO = TIPO,
+         DIRECCION = Direccion)
+
+df444_99 <- df444_99 %>%
+  select(DEPARTAMENTO = DEPARTAMEN,
+         TASA_PROMEDIO = Tasa_prome)
+
+df555_99 <- df555_99 %>%
+  select(DEPARTAMENTO = NOMBDEP,
+         PROVINCIA = NOMBPROV,
+         DISTRITO = NOMBDIST,
+         POBLACION_DISTRITAL_NNA = Total_NNA,
+         DENUNCIAS_2017 = TOTAL_2017,
+         DENUNCIAS_2018 = TOTAL_2018,
+         DENUNCIAS_2019 = TOTAL_2019,
+         DENUNCIAS_2020 = TOTAL_2020,
+         DENUNCIAS_2021 = TOTAL_2021,
+         DENUNCIAS_2022 = TOTAL_2022,
+         DENUNCIAS_2023 = TOTAL_2023,
+         TASA_PROMEDIO = Promedio_T)
+
+df666_99 <- df666_99 %>%
+  select(DEPARTAMENTO = NOMBDEP,
+         PROVINCIA = NOMBPROV,
+         DISTRITO = NOMBDIST,
+         POBLACION_DISTRITAL_NNA = PobNA,
+         Tasa_violencia_sexual_2017 = NA_TS17,
+         Tasa_violencia_sexual_2018 = NA_TS18,
+         Tasa_violencia_sexual_2019 = NA_TS19,
+         Tasa_violencia_sexual_2020 = NA_TS20,
+         Tasa_violencia_sexual_2021 = NA_TS21,
+         Tasa_violencia_sexual_2022 = NA_TS22,
+         Tasa_violencia_sexual_2023 = NA_TS23,
+         Tasa_de_crecimiento_interanual = Tasa_Creci,
+         Casos_violencia_sexual_2017 = NA_VSX17,
+         Casos_violencia_sexual_2018 = NA_VSX18,
+         Casos_violencia_sexual_2019 = NA_VSX19,
+         Casos_violencia_sexual_2020 = NA_VSX20,
+         Casos_violencia_sexual_2021 = NA_VSX22,
+         Casos_violencia_sexual_2023 = NA_VSX23)
+
+# Define la paleta de colores YlOrRd
+pal_99 <- colorRampPalette(brewer.pal(9, "YlOrRd")) 
+# Interfaz de usuario para la selección de Departamento
+# Interfaz de usuario para la selección de Departamento
+ui99 <- fluidPage(
+  tags$style(HTML("
+    body
+    .custom-box {
+      border: solid 1px gray;
+      border-radius: 10px;
+      padding: 10px;
+      min-height: 730px;
+      min-width: 200px;
+    }
+    .custom-box2 {
+      border: solid 1px gray;
+      border-radius: 10px;
+      padding: 10px;
+      min-height: 600px;
+      min-width: 500px;
+    }
+  ")),
+  titlePanel("Análisis de Violencia Sexual"),
+  fluidRow(
+    column(3,class = "custom-box",
+           selectInput("departamento99", "Selecciona un Departamento:", 
+                       choices = c("Nacional", unique(Violencia_sexual_contra_NNA_99$DEPARTAMENTO)), 
+                       selected = "Nacional",
+                       width = '100%'),
+           div(
+             style = "background-color: #7D7D7D; color: white; border-radius: 7px; text-align: center; font-size: 20px; max-width: 5500px; margin-top: 30px; margin-bottom:15px",
+             h4("Para visualizar tu departamento de interes, selecciona uno de la lista. En caso contrario, puedes revisar las capas a nivel nacional")
+           ),
+            div(
+             style = "color: black; text-align: center; font-size: 20px; max-width: 5500px; margin-top: 30px; margin-bottom:15px",
+             h4("¿Deseas más datos sobre la violencia contra Niños, Niñas y Adolescentes?"),
+             h4("")
+           ),
+           div(
+             style = "background-color: #EB9E00; color: white; border-radius: 7px; text-align: center; font-size: 30px; max-width: 5500px; margin-top: 35px; margin-bottom:15px",
+             h4(
+               tags$a(
+                 "Revisa evidencias sobre la violencia sexual contra Niños, Niñas y Adolescentes, revisa el repositorio de evidencias",
+                 href = "https://www.mimp.gob.pe/omep/gestion-de-evidencias-mimp.php#popup",
+                 style = "color: white; text-decoration: none;"
+               )
+             )
+           ),
+           div(
+             style = "background-color: #EB9E00; color: white; border-radius: 7px; text-align: center; font-size: 30px; max-width: 5500px; margin-top: 30px; margin-bottom:15px",
+             h4(
+               tags$a(
+                 "Accede a tableros específicos sobre atenciones especializadas en Niños, Niñas y Adolescentes",
+                 href = "https://www.mimp.gob.pe/omep/estadisticas-btn-nna.php#popup",
+                 style = "color: white; text-decoration: none;"
+               )
+             )
+           ),
+          div(
+             style = "background-color: #EB9E00; color: white; border-radius: 7px; text-align: center; font-size: 30px; max-width: 5500px; margin-top: 30px; margin-bottom:15px",
+             h4(
+               tags$a(
+                 "Revisa los avances de la Politica Nacional Multisectorial de Niñas, Niños y Adolescentes al 2030 (PNMNNA)",
+                 href = "https://www.mimp.gob.pe/omep/estadisticas-tablero-desempenio-PNMNNA.php#popup",
+                 style = "color: white; text-decoration: none;"
+               )
+             )
+           )
+    ),
+    column(9,class="custom-box2",
+           leafletOutput("mapa99", height = "700px")
+    )
+  )
+)
+# Lógica del servidor
+servidor99 <- function(input, output, session) {
+  
+  # Filtrar datos basado en el Departamento seleccionado
+  datos_filtrados99 <- reactive({
+    if (input$departamento99 == "Nacional") {
+      return(list(Violencia_sexual_contra_NNA_99, Violencia_sexual_contra_NNA_provincial_99, df333_99, df444_99, df555_99, df666_99))
+    } else {
+      df11_filt99 <- Violencia_sexual_contra_NNA_99 %>% filter(DEPARTAMENTO == input$departamento99)
+      df222_filt99 <- Violencia_sexual_contra_NNA_provincial_99 %>% filter(DEPARTAMENTO == input$departamento99)
+      df333_filt99 <- df333_99 %>% filter(DEPARTAMENTO == input$departamento99)
+      df444_filt99 <- df444_99 %>% filter(DEPARTAMENTO == input$departamento99)
+      df555_filt99 <- df555_99 %>% filter(DEPARTAMENTO == input$departamento99)
+      df666_filt99 <- df666_99 %>% filter(DEPARTAMENTO == input$departamento99)
+      return(list(df11_filt99, df222_filt99, df333_filt99, df444_filt99, df555_filt99, df666_filt99))
+    }
+  })
+  
+  # Renderizar el mapa con los datos filtrados
+  output$mapa99 <- renderLeaflet({
+    filtered_data99 <- datos_filtrados99()
+    map1_99 <- mapview(filtered_data99[[2]], zcol = c("Tasa_de_crecimiento_interanual"), col.regions = pal_99, layer.name = "Tasa provincial crecimiento interanual<br>de la violencia sexual (2017-2023)-CEM", hide = TRUE, legend = TRUE, burst = FALSE)
+    map2_99 <- mapview(filtered_data99[[1]], zcol = c("Tasa_de_crecimiento_interanual"), col.regions = pal_99, layer.name = "Tasa departamental crecimiento interanual<br>de la violencia sexual (2017-2023)-CEM", legend = TRUE, hide = FALSE, burst = FALSE)
+    map3_99 <- mapview(filtered_data99[[3]], zcol = c("SERVICIO"), col.regions = colorRampPalette(brewer.pal(9, "RdGy")), layer.name = "Servicios atención a la violencia", legend = TRUE, hide = TRUE, burst = FALSE)
+    map4_99 <- mapview(filtered_data99[[4]], zcol = c("TASA_PROMEDIO"), col.regions = pal_99, layer.name = "Tasa promedio violencia sexual (2017-2023)<br>ejercida por docentes a nivel departamental (MINEDU)", legend = TRUE, hide = TRUE, burst = FALSE)
+    map5_99 <- mapview(filtered_data99[[5]], zcol = c("TASA_PROMEDIO"), col.regions = pal_99, layer.name = "Tasa promedio interanual denuncias de la violencia sexual<br>(2017-2023) a nivel distrital (PNP)", legend = TRUE, hide = TRUE, burst = FALSE)
+    map6_99 <- mapview(filtered_data99[[6]], zcol = c("Tasa_de_crecimiento_interanual"), col.regions = pal_99, layer.name = "Tasa distrital crecimiento interanua de la violencia sexual<br>(2017-2023)-CEM", legend = TRUE, hide = TRUE, burst = FALSE)
+    map7_99 <- mapview(Violencia_sexual_contra_NNA_99, col.regions = "black", layer.name = "Límite Departamental", legend = TRUE, hide = FALSE, alpha.regions = 0, burst = FALSE)
+    map8_99 <- mapview(Violencia_sexual_contra_NNA_provincial_99, col.regions = "black", layer.name = "Límite Provincial", legend = TRUE, hide = FALSE, alpha.regions = 0, burst = FALSE)
+    
+    combined_map99 <- map3_99 + map7_99 + map8_99 + map2_99 + map1_99 + map6_99 + map4_99 + map5_99
+    combined_map99 <- combined_map99@map
+    
+    logo_path <- "https://upload.wikimedia.org/wikipedia/commons/c/ca/PCM-MIMP.png"
+    combined_map99 <- leafem::addLogo(combined_map99, logo_path, position = "bottomleft", offset.x = 100, offset.y = 0, width = 300, height = 70)
+    
+    combined_map99
+  })
+}
+
+shinyApp(ui = ui99, server = servidor99)
+```
+### 3. ¿Conoces algun caso de violencia contra Niños, Niñas y Adolescentes?
+```{r timelapseimport9DDD555, message=FALSE, warning=FALSE,include=FALSE}
+# Cargar las librerías necesarias
+library(shiny)
+library(leaflet)
+library(leaflet.extras)
+library(shinyjs)
+library(sf)
+library(zip)
+library(shiny)
+library(leaflet)
+library(leaflet.extras)
+library(shinyjs)
+library(sf)
+# Leer el shapefile
+shapefile_path333F <- "C:/Users/juand/OneDrive/Escritorio/MIMP/distritos/distritos/Servicios/Export_Output.shp"
+Jurisdiccion_PNP <- "C:/Users/juand/OneDrive/Escritorio/MIMP/Fuentes_Violencia/Comisarias_jurisdicciones PNP/Jurisdiccion_PNP.shp"
+puntos <- st_read(shapefile_path333F)
+Jurisdicciones_Comisaria <- st_read(Jurisdiccion_PNP)
+```
+```{r timelEEEapseimport9DDD555, message=FALSE, warning=FALSE,include=TRUE}
+# Crear los iconos para cada tipo de punto
+icons <- awesomeIconList(
+  CEM = makeAwesomeIcon(icon = 'ios-close', iconColor = 'white', library = 'ion', markerColor = 'red'),
+  UPE = makeAwesomeIcon(icon = 'ios-close', iconColor = 'white', library = 'ion', markerColor = 'blue'),
+  SAU = makeAwesomeIcon(icon = 'ios-close', iconColor = 'white', library = 'ion', markerColor = 'purple'),
+  COMISARIA = makeAwesomeIcon(icon = 'ios-close', iconColor = 'white', library = 'ion', markerColor = 'green'),
+  `CEDIF ACERCANDONOS` = makeAwesomeIcon(icon = 'ios-close', iconColor = 'white', library = 'ion', markerColor = 'orange')
+)
+
+logo_path <- "https://upload.wikimedia.org/wikipedia/commons/c/ca/PCM-MIMP.png"
+
+# UI
+ui6 <- fluidPage(
+  useShinyjs(),  # Incluir shinyjs
+  tags$head(
+    tags$style(HTML("
+      .custom-text {
+        position: relative;
+        height: 100%;
+        padding: 6px;
+        background-color: #7D7D7D;
+        color: white;
+        border-radius: 7px;
+        text-align: center;
+        font-size: 18px;
+        max-width: 5500px;
+        margin-top: 15px;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .custom-button {
+        background-color: white;
+        color: #7D7D7D;
+        border: 2px solid #7D7D7D;
+        border-radius: 7px;
+        padding: 6px 12px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .custom-button:hover {
+        background-color: #117BFA;
+        color: white;
+      }
+      .leaflet-control-gps .gps-btn {
+        background-color: magenta !important;
+        border-color: magenta !important;
+      }
+      .leaflet-control-gps .gps-cancel-btn {
+        background-color: magenta !important;
+        border-color: magenta !important;
+      }
+    "))
+  ),
+  div(
+    class = "custom-text", 
+    "Si conoces un caso de Violencia contra Niños, Niñas y Adolescentes Denúncialo, conoce la ubicación los servicios más cercanos a tí en el siguiente mapa:.",
+    a(href = "https://chat100.aurora.gob.pe/", target = "_blank", class = "custom-button", 
+      "¿No puedes acercarte presencialmente? Conversa de manera anónima con un profesional")
+  ),
+  leafletOutput("map"),
+  downloadButton("downloadCSV", "Obtener CSV")
+)
+
+# Server
+server6 <- function(input, output, session) {
+  output$map <- renderLeaflet({
+    leaflet(puntos) %>%
+      addTiles(urlTemplate = 'https://tile.jawg.io/jawg-streets/{z}/{x}/{y}{r}.png?access-token={accessToken}', 
+               options = tileOptions(
+                 attribution = '<a href="https://jawg.io" title="Tiles Courtesy of Jawg Maps" target="_blank">&copy; <b>Jawg</b>Maps</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                 minZoom = 0,
+                 maxZoom = 22,
+                 accessToken = 'cOEBOw96dmDvOP487yl4C3twg1Fwzntl3YKRPi3oc93USS0ESqC8KgyHOsxhrLU2')) %>%
+      setView(lng = -77.034792, lat = -12.048408, zoom = 18) %>%
+      addControlGPS(
+        options = gpsOptions(
+          position = "topleft",
+          activate = TRUE, 
+          autoCenter = TRUE,
+          setView = TRUE,
+          maxZoom = 14)) %>%
+      addAwesomeMarkers(
+        lng = ~x,
+        lat = ~y,
+        icon = ~icons[TIPO],
+        popup = ~paste0("<b>TIPO:</b> ", TIPO, "<br/><b>Direccion:</b> ", ifelse(is.na(Direccion) | Direccion == "", "No disponible", Direccion)),
+        label = ~TIPO,
+        group = "Puntos"
+      ) %>%
+      addPolygons(data = Jurisdicciones_Comisaria, color = "blue", weight = 1, group = "Jurisdicciones_Comisaria") %>%
+      addLayersControl(
+        overlayGroups = c("Puntos", "Jurisdicciones_Comisaria"),
+        options = layersControlOptions(collapsed = FALSE)
+      ) %>%
+      addLegend(
+        position = "bottomright",
+        colors = c("red", "blue", "purple", "orange", "green"),
+        labels = c("CEM", "UPE", "SAU", "CEDIF ACERCANDONOS", "COMISARIA"),
+        title = "Tipo de Servicio",
+        opacity = 1
+      ) %>%
+      addControl(
+        html = paste0('<img src="', logo_path, '" style="width:300px; height:70px;">'),
+        position = "bottomleft",
+        className = "leaflet-control-layers"
+      ) %>%
+      hideGroup("Jurisdicciones_Comisaria")  # Ocultar el grupo "Jurisdicciones_Comisaria" inicialmente
+  })
+  
+  output$downloadCSV <- downloadHandler(
+    filename = function() {
+      paste("puntos", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(st_drop_geometry(puntos), file)
+    }
+  )
+}
+
+# Ejecutar la aplicación Shiny
+shinyApp(ui = ui6, server = server6)
+```
